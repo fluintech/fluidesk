@@ -7,6 +7,7 @@ import { TeamsModule } from './teams/teams.module';
 import { ContactsModule } from './contacts/contacts.module';
 import { ConversationsModule } from './conversations/conversations.module';
 import { AiAgentsModule } from './ai-agents/ai-agents.module';
+import { DealsModule } from './deals/deals.module';
 import { PrismaModule } from './prisma/prisma.module';
 
 @Module({
@@ -20,6 +21,7 @@ import { PrismaModule } from './prisma/prisma.module';
     ContactsModule,
     ConversationsModule,
     AiAgentsModule,
+    DealsModule,
   ],
 })
 export class AppModule {}
