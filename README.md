@@ -1,360 +1,380 @@
 ```markdown
-# PRD — FLUIDESK AI
+# FLUIDESK AI — Diretrizes Técnicas AI-First
 
-## 1. Visão Geral
+## 1. Princípio Arquitetural: AI-First
 
-**Nome do Produto:** FLUIDESK AI  
-**Empresa:** Fluintech  
-**Categoria:** Plataforma SaaS OmniChannel com IA Simplificada  
-**Posicionamento:** Plataforma de atendimento e automação com IA feita para desburocratizar e simplificar a operação digital de pequenas e médias empresas.
+FLUIDESK AI deve ser construído com o conceito **AI-First**, onde:
 
----
+- A IA não é um recurso adicional.
+- A IA é o núcleo operacional do sistema.
+- Toda interação pode ser potencialmente mediada por um modelo.
+- Toda funcionalidade pode ser exposta como “skill” para orquestração inteligente.
 
-## 1.1 Conceito do Nome
+A arquitetura deve permitir:
 
-**FLUIDESK AI** une:
-
-- **Flui** → fluxo simples, natural, sem fricção  
-- **Desk** → central de atendimento  
-- **AI** → inteligência acessível  
-
-A proposta é clara:  
-**IA que flui, sem complexidade técnica.**
+- Troca de modelo sem refatoração estrutural.
+- Orquestração multi-modelo.
+- Execução segura de ferramentas.
+- Escalabilidade horizontal.
+- Observabilidade completa.
 
 ---
 
-# 2. Propósito do Produto
+# 2. Arquitetura Lógica
 
-Desburocratizar o uso de IA em fluxos de atendimento, vendas e suporte para:
+## 2.1 Camadas Principais
 
-- Pequenas empresas  
-- Profissionais autônomos  
-- Negócios locais  
-- Empresas em crescimento  
-
-Permitindo que qualquer empresa utilize IA e automação sem precisar de time técnico.
-
----
-
-# 3. Problema
-
-Hoje, implementar IA exige:
-
-- Configuração técnica complexa
-- Integrações manuais
-- Ferramentas separadas
-- Curva de aprendizado alta
-- Custos elevados
-
-Pequenas empresas precisam de:
-
-- Simplicidade
-- Automação prática
-- Interface intuitiva
-- Resultado rápido
-
-FLUIDESK AI resolve isso com uma plataforma unificada.
+1. Interface Web (Next.js)
+2. API Backend (NestJS ou similar)
+3. Orquestrador de IA
+4. MCP Server (Model Context Protocol)
+5. Banco de Dados (PostgreSQL + pgvector)
+6. Redis (cache + filas)
+7. Workers assíncronos
 
 ---
 
-# 4. Público-Alvo
+# 3. Conexão com Qualquer Modelo LLM
 
-## 4.1 Segmentos
+## 3.1 Abstração Obrigatória
 
-- PMEs
-- Autônomos
-- Clínicas
-- Escritórios
-- E-commerces
-- Prestadores de serviço
-- Infoprodutores
+Criar uma camada chamada:
 
-## 4.2 Personas
+`LLMProviderAdapter`
 
-- Dono de pequena empresa
-- Gestor comercial
-- SDR
-- Suporte
-- Assistente administrativo
+Interface padrão:
 
----
-
-# 5. Proposta de Valor
-
-FLUIDESK AI permite:
-
-- Centralizar atendimento
-- Automatizar respostas
-- Organizar leads
-- Executar follow-ups
-- Criar fluxos inteligentes
-- Usar IA sem precisar programar
-
-Tudo em uma única interface.
+```ts
+interface LLMProvider {
+  name: string
+  generate(input: LLMInput): Promise<LLMOutput>
+  stream?(input: LLMInput): AsyncIterable<LLMChunk>
+  embeddings?(text: string[]): Promise<number[][]>
+}
+````
 
 ---
 
-# 6. Funcionalidades Principais
+## 3.2 Implementações Suportadas
+
+* OpenAI
+* Azure OpenAI
+* Anthropic
+* Google Gemini
+* Mistral
+* Groq
+* Modelos locais via Ollama
+* Modelos hospedados privados
+
+Cada provider deve:
+
+* Suportar fallback
+* Permitir timeout configurável
+* Permitir retry exponencial
+* Log estruturado
+* Controle de custo por token
 
 ---
 
-## 6.1 Multi-Tenant
+## 3.3 Estratégia Multi-Modelo
 
-- Isolamento por tenant
-- Controle de acesso por usuário
-- Times internos
-- Permissões por papel
+Sistema deve permitir:
 
----
-
-## 6.2 OmniChannel
-
-### Canais suportados
-
-- WhatsApp
-- Instagram
-- Facebook Messenger
-- E-mail
-- Webchat (futuro)
-
-### Recursos
-
-- Conexão simplificada
-- Status em tempo real
-- Agente IA por canal
-- Time responsável por canal
+* Modelo por tenant
+* Modelo por canal
+* Modelo por agente
+* Modelo por tipo de tarefa (chat, embeddings, classificação)
 
 ---
 
-## 6.3 Interface de Conversas (Estilo Chatwoot — Futurista e Simples)
+# 4. MCP Server — Seguro por Padrão
 
-### Diretriz de UX
+## 4.1 Conceito
 
-Interface moderna, minimalista, intuitiva e com dark mode padrão.
+O MCP Server é a camada de execução controlada de ferramentas (“skills”).
 
----
+Ele:
 
-### Estrutura
-
-#### Sidebar Esquerda
-
-- Lista de conversas
-- Filtros por:
-  - Canal
-  - Status
-  - Time
-  - Tags
-- Busca rápida
-- Indicador de SLA
+* Expõe funcionalidades do sistema para a IA
+* Valida permissões
+* Executa ações com segurança
+* Isola contexto por tenant
 
 ---
 
-#### Área Central (Chat)
+## 4.2 Regras de Segurança
 
-- Bolhas diferenciadas:
-  - Cliente
-  - IA
-  - Operador
-- Timestamp discreto
-- Indicador de envio
-- Scroll infinito
-- Upload de mídia
-- Sugestões rápidas da IA
-- Atualização via WebSocket
+### 1. Contexto Isolado
 
----
+Toda execução deve incluir:
 
-#### Painel Direito
-
-- Dados do contato
-- Tags
-- Pipeline
-- Dados coletados
-- Histórico
-- Ações rápidas:
-  - Transferir
-  - Encerrar
-  - Agendar follow-up
-
----
-
-## 6.4 CRM Integrado
-
-- Pipeline visual
-- Estágios customizáveis
-- Movimentação manual ou automática
-- Histórico de mudanças
-- Tags e categorização
-
----
-
-## 6.5 Agentes de IA Simplificados
-
-- Criar agente em poucos passos
-- Prompt base configurável
-- Vincular canal
-- Vincular base de conhecimento
-- Configuração simplificada (modo avançado opcional)
-
----
-
-## 6.6 Base de Conhecimento
-
-- Upload de arquivos
-- Indexação automática
-- Embeddings
-- Busca vetorial
-- Associação ao agente
-
----
-
-## 6.7 Flow Engine (Sem Código)
-
-Permite criar formulários inteligentes dentro do chat.
-
-### Exemplo
-
-Vendas:
-- Orçamento
-- Interesse
-- Prazo
-
-Suporte:
-- Categoria
-- Urgência
-
-### Recursos
-
-- Campos customizáveis
-- Armazenamento estruturado
-- Utilização em segmentação
-
----
-
-## 6.8 Roteamento Automático
-
-Baseado em:
-
-- Canal
-- Palavras-chave
-- Intenção da IA
-- SLA
-- Disponibilidade de time
-
----
-
-## 6.9 Follow-Up Inteligente
-
-- Agendamento manual
-- Regras automáticas
-- Execução por worker
-- Histórico de disparos
-
----
-
-## 6.10 Campanhas
-
-- Segmentação por:
-  - Tags
-  - Pipeline
-  - Dados coletados
-- Monitoramento por contato
-- Status detalhado
-
----
-
-## 6.11 Automação Visual
-
-### Triggers
-
-- Nova conversa
-- Conversa parada
-- Mudança de estágio
-- Tag adicionada
-
-### Ações
-
-- Enviar mensagem
-- Agendar follow-up
-- Alterar pipeline
-- Notificar time
-
----
-
-# 7. Requisitos Não Funcionais
-
-## Performance
-- Resposta inferior a 300ms
-- Paginação por cursor
-- Índices otimizados
-
-## Escalabilidade
-- Preparado para alto volume de mensagens
-- Workers desacoplados
-- Arquitetura orientada a eventos
-
-## Segurança
-- RLS
-- Criptografia de credenciais
-- Controle de acesso granular
-
-## UX
-- Dark mode padrão
-- Experiência fluida
-- Mobile-friendly
-- Interface intuitiva
-
----
-
-# 8. Stack Recomendada
-
-Backend:
-- Node.js / NestJS
-- PostgreSQL
-- pgvector
-- Redis
-- WebSocket
-- BullMQ
-
-Frontend:
-- Next.js
-- React
-- TailwindCSS
-
-Infra:
-- Docker
-- Cloud escalável
-- Monitoramento estruturado
-
----
-
-# 9. Roadmap
-
-## Fase 1
-- WhatsApp
-- Interface de chat
-- IA básica
-- Times
-
-## Fase 2
-- CRM
-- Flow engine
-- RAG
-
-## Fase 3
-- Automação avançada
-- Campanhas
-- Analytics
-- Billing
-
----
-
-# 10. Posicionamento Estratégico
-
-FLUIDESK AI deve comunicar:
-
-> Inteligência artificial descomplicada para negócios que precisam crescer sem burocracia.
-
-É a forma mais simples de usar IA no atendimento e nas vendas.
+```json
+{
+  "tenant_id": "...",
+  "user_id": "...",
+  "conversation_id": "...",
+  "role": "..."
+}
 ```
 
+Sem contexto válido → rejeitar execução.
+
+---
+
+### 2. Validação de Permissões
+
+Antes de executar qualquer skill:
+
+* Validar role do usuário
+* Validar escopo do tenant
+* Validar escopo do time
+* Registrar auditoria
+
+---
+
+### 3. Execução Determinística
+
+Skills devem:
+
+* Ter schema JSON validado
+* Não aceitar input livre
+* Não permitir execução arbitrária
+
+---
+
+### 4. Sandbox
+
+* Nenhuma skill executa código dinâmico
+* Nenhuma skill acessa filesystem diretamente
+* Nenhuma skill executa SQL sem parametrização
+
+---
+
+# 5. Skills do Sistema
+
+Cada módulo expõe um conjunto de skills.
+
+---
+
+## 5.1 Módulo Conversas
+
+Skills:
+
+* create_message
+* assign_conversation
+* close_conversation
+* add_tag
+* remove_tag
+* transfer_to_team
+* schedule_followup
+
+---
+
+## 5.2 Módulo CRM
+
+Skills:
+
+* create_pipeline
+* move_stage
+* update_deal
+* add_note
+* create_task
+
+---
+
+## 5.3 Módulo Flow Engine
+
+Skills:
+
+* request_field
+* save_structured_data
+* validate_input
+* trigger_next_step
+
+---
+
+## 5.4 Módulo Base de Conhecimento
+
+Skills:
+
+* search_knowledge
+* retrieve_document
+* cite_source
+
+---
+
+## 5.5 Módulo Automação
+
+Skills:
+
+* trigger_workflow
+* evaluate_rule
+* execute_action
+
+---
+
+## 5.6 Módulo Campanhas
+
+Skills:
+
+* create_campaign
+* segment_contacts
+* send_bulk_message
+
+---
+
+# 6. Orquestrador de IA
+
+## 6.1 Funções
+
+* Selecionar modelo
+* Construir contexto
+* Carregar memória
+* Injetar ferramentas
+* Validar saída
+* Registrar logs
+* Monitorar custo
+
+---
+
+## 6.2 Contexto Inteligente
+
+O prompt deve conter:
+
+* Dados do tenant
+* Dados do contato
+* Histórico resumido
+* Dados estruturados coletados
+* Base de conhecimento relevante
+* Lista de skills permitidas
+
+---
+
+## 6.3 Controle de Token
+
+* Compressão automática de histórico
+* Resumo progressivo
+* Limite máximo configurável por tenant
+
+---
+
+# 7. Estrutura Escalável
+
+## 7.1 Arquitetura Orientada a Eventos
+
+Eventos principais:
+
+* message.received
+* message.sent
+* conversation.closed
+* pipeline.updated
+* followup.due
+
+Processados por:
+
+* Workers assíncronos
+* Filas (Redis / BullMQ)
+
+---
+
+## 7.2 Escalabilidade Horizontal
+
+* API stateless
+* Workers replicáveis
+* WebSocket com cluster
+* Particionamento futuro de mensagens
+
+---
+
+# 8. Observabilidade
+
+Obrigatório:
+
+* Logs estruturados
+* Métricas por modelo
+* Latência por provider
+* Custo por tenant
+* Execução de skills auditável
+
+---
+
+# 9. Documentação Moderna de Integração
+
+## 9.1 Developer Portal
+
+Deve incluir:
+
+* API Reference (OpenAPI)
+* SDKs oficiais
+* Webhooks
+* Guia rápido de integração
+* Exemplos práticos
+* Playground interativo
+
+---
+
+## 9.2 API Design
+
+Padrões:
+
+* RESTful
+* Versionamento: `/v1/`
+* JSON padronizado
+* Idempotência para endpoints críticos
+
+---
+
+## 9.3 Webhooks
+
+Eventos expostos:
+
+* conversation.created
+* message.created
+* deal.updated
+* campaign.completed
+
+Segurança:
+
+* Assinatura HMAC
+* Timestamp
+* Retry automático
+
+---
+
+# 10. Segurança Global
+
+* Row Level Security no banco
+* Criptografia de credenciais
+* Secrets por tenant
+* Rate limiting
+* Proteção contra prompt injection
+* Sanitização de saída
+* Policy Engine para IA
+
+---
+
+# 11. Diretriz Estratégica
+
+FLUIDESK AI deve ser:
+
+* Modular
+* Extensível
+* Model-agnostic
+* Seguro por padrão
+* Escalável desde o primeiro dia
+
+---
+
+# 12. Declaração Final
+
+FLUIDESK AI não é apenas um sistema de atendimento.
+
+É uma plataforma AI-First onde:
+
+* Cada módulo é uma skill.
+* Cada ação é auditável.
+* Cada tenant é isolado.
+* Cada modelo pode ser substituído.
+* Cada fluxo é inteligente por padrão.
+
+```
