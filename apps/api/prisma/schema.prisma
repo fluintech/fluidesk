@@ -1,0 +1,369 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Tenant {
+  id        String   @id @default(uuid())
+  name      String
+  slug      String   @unique
+  plan      String   @default("free")
+  metadata  Json     @default("{}")
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users        User[]
+  teams        Team[]
+  channels     Channel[]
+  companies    Company[]
+  contacts     Contact[]
+  pipelines    Pipeline[]
+  deals        Deal[]
+  conversations Conversation[]
+  tags         Tag[]
+  aiAgents     AiAgent[]
+
+  @@map("tenants")
+}
+
+model User {
+  id           String    @id @default(uuid())
+  tenantId     String
+  name         String
+  email        String    @unique
+  passwordHash String?
+  role         String    @default("agent")
+  avatarUrl    String?
+  isActive     Boolean   @default(true)
+  lastLoginAt  DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  tenant       Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  teamMembers  TeamMember[]
+  conversations Conversation[]
+  assignedDeals Deal[]
+
+  @@index([tenantId])
+  @@index([email])
+  @@map("users")
+}
+
+model Team {
+  id          String   @id @default(uuid())
+  tenantId    String
+  name        String
+  description String?
+  type        String   @default("support")
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tenant    Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  members   TeamMember[]
+  aiAgents  TeamAiAgent[]
+  conversations Conversation[]
+
+  @@index([tenantId])
+  @@map("teams")
+}
+
+model TeamMember {
+  id         String   @id @default(uuid())
+  teamId     String
+  userId     String
+  roleInTeam String   @default("member")
+  createdAt  DateTime @default(now())
+
+  team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([teamId, userId])
+  @@map("team_members")
+}
+
+model TeamAiAgent {
+  teamId     String
+  aiAgentId  String
+  isDefault  Boolean  @default(false)
+
+  team    Team    @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  aiAgent AiAgent @relation(fields: [aiAgentId], references: [id], onDelete: Cascade)
+
+  @@id([teamId, aiAgentId])
+  @@map("team_ai_agents")
+}
+
+model Channel {
+  id          String   @id @default(uuid())
+  tenantId    String
+  name        String
+  type        String
+  credentials Json?
+  settings    Json     @default("{}")
+  status      String   @default("active")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tenant       Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  conversations Conversation[]
+
+  @@index([tenantId])
+  @@map("channels")
+}
+
+model Company {
+  id        String   @id @default(uuid())
+  tenantId  String
+  name      String
+  domain    String?
+  industry  String?
+  size      String?
+  metadata  Json     @default("{}")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant   Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  contacts Contact[]
+  deals    Deal[]
+
+  @@index([tenantId])
+  @@map("companies")
+}
+
+model Contact {
+  id           String    @id @default(uuid())
+  tenantId     String
+  companyId    String?
+  name         String
+  email        String?
+  phone        String?
+  document     String?
+  externalId   String?
+  avatarUrl    String?
+  metadata     Json      @default("{}")
+  tags         String[]  @default([])
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  tenant       Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  company      Company?        @relation(fields: [companyId], references: [id])
+  conversations Conversation[]
+  deals        Deal[]
+
+  @@index([tenantId])
+  @@index([tenantId, phone])
+  @@index([tenantId, email])
+  @@map("contacts")
+}
+
+model Pipeline {
+  id          String   @id @default(uuid())
+  tenantId    String
+  name        String
+  description String?
+  isDefault   Boolean  @default(false)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tenant Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  stages PipelineStage[]
+  deals  Deal[]
+
+  @@index([tenantId])
+  @@map("pipelines")
+}
+
+model PipelineStage {
+  id           String   @id @default(uuid())
+  pipelineId    String
+  name         String
+  description  String?
+  orderIndex   Int      @default(0)
+  isWon        Boolean  @default(false)
+  isLost       Boolean  @default(false)
+  metadata     Json     @default("{}")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  pipeline Pipeline @relation(fields: [pipelineId], references: [id], onDelete: Cascade)
+  deals    Deal[]
+
+  @@index([pipelineId])
+  @@map("pipeline_stages")
+}
+
+model Deal {
+  id                  String    @id @default(uuid())
+  tenantId            String
+  pipelineId          String
+  stageId             String
+  contactId           String?
+  companyId           String?
+  title               String
+  value               Decimal   @default(0) @db.Decimal(15, 2)
+  currency            String    @default("BRL")
+  expectedCloseDate  DateTime?
+  probability         Int       @default(50)
+  metadata            Json      @default("{}")
+  assignedToId        String?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+  closedAt            DateTime?
+  wonAt               DateTime?
+  lostAt              DateTime?
+
+  tenant     Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  pipeline   Pipeline       @relation(fields: [pipelineId], references: [id])
+  stage      PipelineStage  @relation(fields: [stageId], references: [id])
+  contact    Contact?       @relation(fields: [contactId], references: [id])
+  company    Company?       @relation(fields: [companyId], references: [id])
+  assignedTo User?          @relation(fields: [assignedToId], references: [id])
+
+  @@index([tenantId])
+  @@index([stageId])
+  @@index([contactId])
+  @@map("deals")
+}
+
+model Conversation {
+  id                String    @id @default(uuid())
+  tenantId          String
+  contactId         String?
+  channelId         String?
+  teamId            String?
+  assignedUserId    String?
+  status            String    @default("open")
+  priority          String    @default("normal")
+  startedAt         DateTime  @default(now())
+  firstResponseAt   DateTime?
+  closedAt          DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  tenant       Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  contact      Contact?  @relation(fields: [contactId], references: [id])
+  channel     Channel?  @relation(fields: [channelId], references: [id])
+  team         Team?     @relation(fields: [teamId], references: [id])
+  assignedUser User?     @relation(fields: [assignedUserId], references: [id])
+  messages    Message[]
+  tags        ConversationTag[]
+
+  @@index([tenantId])
+  @@index([contactId])
+  @@index([teamId])
+  @@index([assignedUserId])
+  @@index([status])
+  @@map("conversations")
+}
+
+model Message {
+  id             String   @id @default(uuid())
+  conversationId String
+  senderType     String
+  senderId       String?
+  content        String?
+  contentType    String   @default("text")
+  rawPayload     Json?
+  metadata       Json     @default("{}")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId])
+  @@index([createdAt])
+  @@map("messages")
+}
+
+model Tag {
+  id          String   @id @default(uuid())
+  tenantId    String
+  name        String
+  color       String   @default("#6366f1")
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tenant      Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  conversations ConversationTag[]
+
+  @@unique([tenantId, name])
+  @@index([tenantId])
+  @@map("tags")
+}
+
+model ConversationTag {
+  conversationId String
+  tagId          String
+  createdAt      DateTime @default(now())
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  tag          Tag          @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([conversationId, tagId])
+  @@map("conversation_tags")
+}
+
+model AiAgent {
+  id             String   @id @default(uuid())
+  tenantId       String
+  name           String
+  description    String?
+  modelProvider  String?
+  modelName      String?
+  temperature    Decimal  @default(0.7) @db.Decimal(3, 2)
+  maxTokens      Int      @default(2048)
+  systemPrompt   String?
+  instructions   String?
+  tools          Json     @default("[]")
+  settings       Json     @default("{}")
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  tenant  Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  teams   TeamAiAgent[]
+  config  AgentWhatsappConfig?
+
+  @@index([tenantId])
+  @@map("ai_agents")
+}
+
+model AgentWhatsappConfig {
+  id                         String   @id @default(uuid())
+  agentId                    String   @unique
+  tenantId                   String
+  phoneNumberId              String?
+  whatsappBusinessAccountId  String?
+  accessTokenEncrypted       String?
+  webhookVerifyToken         String?
+  connectionStatus           String   @default("disconnected")
+  mode                       String   @default("test")
+  isActive                   Boolean  @default(false)
+  firstResponseTimeSeconds   Int      @default(30)
+  enableFirstResponseTimer   Boolean  @default(true)
+  enableInactivityFollowup  Boolean  @default(true)
+  inactivityTimeoutSeconds   Int      @default(300)
+  inactivityFollowupMessage  String?
+  maxInactivityFollowups    Int      @default(3)
+  enableSentimentAnalysis   Boolean  @default(true)
+  enableAutoClassification  Boolean  @default(true)
+  welcomeMessage            String?
+  offlineMessage            String?
+  dailyMessageLimit          Int      @default(1000)
+  monthlyMessageLimit       Int      @default(30000)
+  createdAt                 DateTime @default(now())
+  updatedAt                 DateTime @updatedAt
+
+  agent AiAgent @relation(fields: [agentId], references: [id], onDelete: Cascade)
+
+  @@index([agentId])
+  @@map("agent_whatsapp_configs")
+}
