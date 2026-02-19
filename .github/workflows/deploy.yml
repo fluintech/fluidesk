@@ -1,0 +1,16 @@
+name: Deploy to Coolify
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to Coolify
+        uses: coollabsio/coolify-action@main
+        with:
+          coolify_url: "${{ secrets.COOLIFY_URL }}"
+          coolify_token: "${{ secrets.COOLIFY_TOKEN }}"
+          project_uuid: "${{ secrets.COOLIFY_PROJECT_UUID }}"
