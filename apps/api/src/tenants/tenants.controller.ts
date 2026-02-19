@@ -2,41 +2,28 @@ import { Controller, Get, Put, Body, Param } from '@nestjs/common';
 import { TenantsService } from './tenants.service';
 import { CurrentTenant } from '../common/decorators/current-tenant.decorator';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
+import { UseGuards } from '@nestjs/common';
+import { AuthGuard } from '@nestjs/passport';
 
 @ApiTags('tenants')
 @ApiBearerAuth()
+@UseGuards(AuthGuard('jwt'))
 @Controller('tenants')
 export class TenantsController {
   constructor(private tenantsService: TenantsService) {}
 
   @Get('me')
-  async getMyTenant(@CurrentTenant() tenantId: string) {
+  getMyTenant(@CurrentTenant() tenantId: string) {
     return this.tenantsService.findById(tenantId);
   }
 
-  @Get('me/subscription')
-  async getMySubscription(@CurrentTenant() tenantId: string) {
-    return this.tenantsService.getSubscription(tenantId);
-  }
-
-  @Get('me/onboarding')
-  async getOnboardingSteps(@CurrentTenant() tenantId: string) {
-    return this.tenantsService.getOnboardingSteps(tenantId);
-  }
-
-  @Put('me/onboarding/:stepKey/complete')
-  async completeOnboardingStep(
-    @CurrentTenant() tenantId: string,
-    @Param('stepKey') stepKey: string,
-  ) {
-    return this.tenantsService.completeOnboardingStep(tenantId, stepKey);
+  @Get('me/pipelines')
+  getPipelines(@CurrentTenant() tenantId: string) {
+    return this.tenantsService.getPipelines(tenantId);
   }
 
   @Put('me')
-  async updateMyTenant(
-    @CurrentTenant() tenantId: string,
-    @Body() data: any,
-  ) {
+  updateMyTenant(@CurrentTenant() tenantId: string, @Body() data: any) {
     return this.tenantsService.update(tenantId, data);
   }
 }

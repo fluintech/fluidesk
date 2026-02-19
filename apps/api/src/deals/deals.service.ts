@@ -31,7 +31,6 @@ export class DealsService {
         stage: true,
         pipeline: true,
         assignedTo: true,
-        appointments: true,
       },
     });
   }
@@ -57,10 +56,8 @@ export class DealsService {
     const updateData: any = { stageId };
     if (stage?.isWon) {
       updateData.wonAt = new Date();
-      updateData.status = 'won';
     } else if (stage?.isLost) {
       updateData.lostAt = new Date();
-      updateData.status = 'lost';
     }
 
     return this.prisma.deal.update({
