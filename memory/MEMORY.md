@@ -1,0 +1,1 @@
+- A capacidade de marcar etiquetas nas tarefas do Trello foi confirmada e as etiquetas foram criadas corretamente. As novas instruções garantirão que as etiquetas sejam sempre atribuídas às tarefas conforme necessário.
