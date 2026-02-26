@@ -1,2 +1,2 @@
 # Checagens recomendadas (executar 2–4x por dia):
-- SSH: Verificar se as chaves SSH estão funcionando corretamente.
+- Estrutura atual: Salvar configurações do projeto em git@github.com:fluintech/fluidesk.git diariamente.
