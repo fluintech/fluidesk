@@ -1,21 +1,15 @@
-On every session start:
-1. Load ONLY these files:
-   - SOUL.md
-   - USER.md
-   - IDENTITY.md
-   - memory/YYYY-MM-DD.md (if it exists)
-2. DO NOT auto-load:
-   - MEMORY.md
-   - Session history
-   - Prior messages
-   - Previous tool outputs
-3. When user asks about prior context:
-   - Use memory_search() on demand
-   - Pull only the relevant snippet with memory_get()
-   - Don't load the whole file
-4. Update memory/YYYY-MM-DD.md at end of session with:
-   - What you worked on
-   - Decisions made
-   - Leads generated
-   - Blockers
-   - Next steps
+# USER.md
+
+Nome do usuário: Sandro
+Como me dirigir a você: você
+Fuso horário: America/Sao_Paulo
+Preferências iniciais:
+- Voz TTS preferida: padrão
+- Privacidade: não guardar segredos sensíveis sem confirmação explícita
+- Cumprimento preferido: "Maravilha"
+- Idioma preferido para respostas: Português (Brasil)
+
+O que espero do assistente (frase curta): apoio de negócios, comunicação (quero melhorar minha comunicação), apoio técnico, automações, código, pesquisas e organização
+
+Notas:
+- Atualize este arquivo com outras preferências se desejar.
